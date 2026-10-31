@@ -71,6 +71,7 @@ const MIGRATIONS: string[] = [
 ];
 
 const LOCK_KEY = 728311; // arbitrary advisory lock id for Quorum setup
+const SETUP_VERSION = "2"; // raise this when DDL or MIGRATIONS change
 
 let ready: Promise<void> | null = null;
 
@@ -95,10 +96,18 @@ async function runSetup() {
       "connection_failed",
     );
   }
+  client.on("error", (err: Error) => console.error("quorum setup connection dropped:", err.message));
   try {
-    await client.query("SELECT pg_advisory_lock($1)", [LOCK_KEY]);
+    // Already set up, which is the normal case on every cold start: no lock is needed at all.
+    const current = await client.query("SELECT value FROM meta WHERE key = 'setup_version'").catch(() => null);
+    if (current?.rows[0]?.value === SETUP_VERSION) return;
+
+    // The transaction lock releases itself on commit, rollback, or a dropped connection,
+    // and the timeout means one stuck instance can never hang every other request.
     try {
       await client.query("BEGIN");
+      await client.query("SET LOCAL lock_timeout = '20s'");
+      await client.query("SELECT pg_advisory_xact_lock($1)", [LOCK_KEY]);
       for (const stmt of DDL) await client.query(stmt);
       for (const stmt of MIGRATIONS) await client.query(stmt);
       const seeded = await client.query("SELECT value FROM meta WHERE key = 'seeded'");
@@ -106,14 +115,18 @@ async function runSetup() {
         await insertSeed(client);
         await client.query("INSERT INTO meta (key, value) VALUES ('seeded', 'true')");
       }
+      await client.query(
+        `INSERT INTO meta (key, value) VALUES ('setup_version', $1)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        [SETUP_VERSION],
+      );
       await client.query("COMMIT");
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       throw err;
-    } finally {
-      await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]).catch(() => {});
     }
   } finally {
+    client.removeAllListeners("error");
     client.release();
   }
 }

@@ -9,7 +9,8 @@ async function begin(retries = 1): Promise<PoolClient> {
   const client = await getPool().connect();
   client.on("error", ignoreDrop);
   try {
-    await client.query("BEGIN");
+    // A request waiting on a row lock fails with a clear error instead of hanging the page.
+    await client.query("BEGIN; SET LOCAL lock_timeout = '8s'");
     return client;
   } catch (err) {
     client.off("error", ignoreDrop);
