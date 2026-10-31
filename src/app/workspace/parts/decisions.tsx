@@ -1,39 +1,38 @@
 "use client";
 
+import { ChevronDown, Hourglass, Users } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { Act, Change, Decision, View } from "../types";
-import { StatusBadge } from "./status";
+import { Avatar } from "./avatar";
 
-// The decision ledger. Anyone can ask for a change; the other person confirms it.
+const FIELD = "h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+const SUGGESTIONS: Record<string, string> = { D1: "Enterprise IT teams" };
+
+// The team's plan. Anyone can ask for a change, and a second person must agree to it.
 export function DecisionsPanel({ view, act }: { view: View; act: Act }) {
   return (
-    <section aria-labelledby="decisions-heading" className="space-y-4">
+    <section aria-labelledby="decisions-heading" className="space-y-3">
       <div>
-        <h2 id="decisions-heading" className="text-lg font-semibold">
-          Decisions
+        <h2 id="decisions-heading" className="text-lg font-bold">
+          The plan
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Changing a decision does not change the page. It marks the sections that depended on it, then a person decides
-          what happens next.
-        </p>
+        <p className="text-sm text-muted-foreground">Decisions the page is built on. Agents read these before they write.</p>
       </div>
       <ul className="space-y-3">
         {view.decisions.map((d) => (
-          <DecisionRow key={d.id} d={d} changes={view.changes.filter((c) => c.decisionId === d.id)} me={view.me} act={act} />
+          <DecisionRow key={d.id} d={d} pending={view.changes.find((c) => c.decisionId === d.id && c.status === "open")} act={act} />
         ))}
       </ul>
     </section>
   );
 }
 
-function DecisionRow({ d, changes, me, act }: { d: Decision; changes: Change[]; me: string; act: Act }) {
+function DecisionRow({ d, pending, act }: { d: Decision; pending?: Change; act: Act }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
-  const pending = changes.find((c) => c.status === "open");
-  const requestable = !pending;
-  const canConfirm = pending && pending.requestedBy !== me;
+  const suggestion = SUGGESTIONS[d.id];
 
   async function request(e: React.FormEvent) {
     e.preventDefault();
@@ -46,95 +45,63 @@ function DecisionRow({ d, changes, me, act }: { d: Decision; changes: Change[]; 
   }
 
   return (
-    <li id={`ledger-${d.id}`} className="scroll-mt-6 rounded-lg border border-border bg-background p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">
-            {d.id} · Owner: {d.ownerName}
-          </p>
-          <h3 className="text-base font-semibold">{d.title}</h3>
-          <p className="text-sm">
-            {d.value} <span className="text-muted-foreground">(version {d.version})</span>
-          </p>
-          <p className="text-xs text-muted-foreground">{d.question}</p>
-        </div>
-        {pending ? <StatusBadge status="open" /> : null}
-      </div>
+    <li id={`ledger-${d.id}`} className="scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-card">
+      <p className="text-xs font-semibold text-muted-foreground">{d.question}</p>
+      <p className="mt-1 text-base leading-snug font-bold">{d.value}</p>
+      <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Avatar actor={d.owner} size="sm" /> {d.ownerName} owns this · Version {d.version}
+      </p>
 
       {pending ? (
-        <div className="mt-3 rounded-md border border-border bg-muted p-3 text-sm">
-          <p>
-            {pending.requestedBy === "maya" ? "Maya" : "Arjun"} asked to change this to{" "}
-            <strong>&ldquo;{pending.requestedValue}&rdquo;</strong>. Reason: {pending.reason}
-          </p>
-          <p className="mt-1 text-muted-foreground">
-            Affects: {d.affectedSections.join(", ") || "no sections"}.
-          </p>
-          {canConfirm ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => act("confirmChange", { changeId: pending.id, baseVersion: d.version }, "Confirmed. The decision is updated.")}>
-                Confirm change
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => act("rejectChange", { changeId: pending.id }, "Rejected. The decision stays as it was.")}>
-                Reject
-              </Button>
-            </div>
-          ) : (
-            <p className="mt-2 text-muted-foreground">You asked for this change, so the other person needs to confirm it.</p>
-          )}
-        </div>
-      ) : null}
-
-      {requestable ? (
+        <a href="#attention" className="mt-3 flex items-start gap-2 rounded-lg bg-info-soft p-3 text-sm text-info">
+          <Hourglass size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
+          <span>Change to &ldquo;{pending.requestedValue}&rdquo; needs a second person.</span>
+        </a>
+      ) : (
         <div className="mt-3">
           <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-            {open ? "Cancel" : "Propose a change"}
+            {open ? "Cancel" : "Change this"}
           </Button>
           {open ? (
-            <form onSubmit={request} className="mt-3 grid gap-3 sm:max-w-xl">
+            <form onSubmit={request} className="mt-3 space-y-3">
               <label className="grid gap-1 text-sm">
-                <span className="font-medium">New value</span>
-                <input
-                  required
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  className="h-9 rounded-md border border-border bg-background px-3"
-                  placeholder={d.value}
-                />
+                <span className="font-semibold">New decision</span>
+                <input required value={value} maxLength={200} onChange={(e) => setValue(e.target.value)} className={FIELD} placeholder={d.value} />
               </label>
-              <div className="rounded-md border border-border bg-muted p-3 text-sm" aria-live="polite">
-                <p className="font-medium">Impact preview</p>
-                <p className="mt-1 text-muted-foreground">
-                  If confirmed, these will be marked out of date: {d.affectedSections.join(", ") || "no sections"}. Nothing
-                  on the live page changes until someone decides what to do next.
+              {suggestion && !value ? (
+                <button type="button" onClick={() => setValue(suggestion)} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold hover:bg-border">
+                  Try: {suggestion}
+                </button>
+              ) : null}
+              <div className="rounded-lg bg-warn-soft p-3 text-sm text-warn" aria-live="polite">
+                <p className="font-semibold">Impact preview</p>
+                <p className="mt-0.5">
+                  If confirmed, this will mark {d.affectedSections.join(", ") || "no sections"} out of date. Sections that do not rely on it stay as they are.
                 </p>
               </div>
               <label className="grid gap-1 text-sm">
-                <span className="font-medium">Why</span>
-                <input
-                  required
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="h-9 rounded-md border border-border bg-background px-3"
-                  placeholder="One sentence for the other person"
-                />
+                <span className="font-semibold">Why are you changing it?</span>
+                <input required value={reason} maxLength={400} onChange={(e) => setReason(e.target.value)} className={FIELD} placeholder="One sentence for your teammate" />
               </label>
-              <div>
-                <Button type="submit" size="sm">
-                  Send for confirmation
-                </Button>
-              </div>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users size={14} aria-hidden="true" /> A second person must confirm this.
+              </p>
+              <Button type="submit" size="sm">
+                Send for confirmation
+              </Button>
             </form>
           ) : null}
         </div>
-      ) : null}
+      )}
 
-      <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-muted-foreground">History ({d.history.length} versions)</summary>
-        <ol className="mt-2 space-y-1 text-muted-foreground">
+      <details className="group mt-3 text-sm">
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-semibold text-muted-foreground">
+          History ({d.history.length}) <ChevronDown size={14} aria-hidden="true" className="transition-transform group-open:rotate-180" />
+        </summary>
+        <ol className="mt-2 space-y-1.5 text-xs text-muted-foreground">
           {d.history.map((h) => (
             <li key={h.version}>
-              v{h.version}: {h.value}
+              <span className="font-semibold text-foreground">Version {h.version}:</span> {h.value}
               {h.reason ? ` · ${h.reason}` : ""}
             </li>
           ))}

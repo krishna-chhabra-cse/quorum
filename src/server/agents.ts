@@ -42,9 +42,10 @@ export async function startAgent(c: PoolClient, agentId: "copy" | "pricing") {
 }
 
 // Advance one agent by one tick. The row lock plus the clock check prevent duplicate steps.
+// A poll that finds the row locked skips it, because another request is already advancing it.
 export async function tickAgent(c: PoolClient, agentId: "copy" | "pricing") {
-  const a = await one<any>(c, `SELECT * FROM agents WHERE id = $1 FOR UPDATE`, [agentId]);
-  if (!a || a.status !== "working") return;
+  const a = await one<any>(c, `SELECT * FROM agents WHERE id = $1 AND status = 'working' FOR UPDATE SKIP LOCKED`, [agentId]);
+  if (!a) return;
   const now = await one<{ now: Date }>(c, `SELECT now() AS now`);
   const last = a.last_tick_at ? new Date(a.last_tick_at).getTime() : now!.now.getTime();
   const elapsed = Math.max(0, now!.now.getTime() - last);

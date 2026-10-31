@@ -1,28 +1,112 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(14.5% 0 0);
-  --color-muted: oklch(97% 0 0);
-  --color-muted-foreground: oklch(55.6% 0 0);
-  --color-primary: oklch(20.5% 0 0);
-  --color-primary-foreground: oklch(98.5% 0 0);
-  --color-border: oklch(92.2% 0 0);
-  --radius: 0.625rem;
+  --color-background: #f5f4ef;
+  --color-surface: #ffffff;
+  --color-foreground: #1b2130;
+  --color-muted: #eeeee8;
+  --color-muted-foreground: #596273;
+  --color-primary: #3346c8;
+  --color-primary-foreground: #ffffff;
+  --color-border: #dfdfd7;
+  --color-good: #17693f;
+  --color-good-soft: #e3f4e9;
+  --color-warn: #8f5000;
+  --color-warn-soft: #fdefd5;
+  --color-bad: #ad2415;
+  --color-bad-soft: #fce9e6;
+  --color-info: #1c5ab3;
+  --color-info-soft: #e4eefc;
+  --color-agent: #6237c8;
+  --color-agent-soft: #eee8fd;
+  --color-maya: #b4265f;
+  --color-maya-soft: #fce6ef;
+  --color-arjun: #0e6e80;
+  --color-arjun-soft: #dff3f6;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(27 33 48 / 5%), 0 6px 18px rgb(27 33 48 / 5%);
 }
 
+/* Dark colors. Defined twice so an explicit choice beats the device setting in both directions. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: oklch(14.5% 0 0);
-    --color-foreground: oklch(98.5% 0 0);
-    --color-muted: oklch(26.9% 0 0);
-    --color-muted-foreground: oklch(70.8% 0 0);
-    --color-primary: oklch(92.2% 0 0);
-    --color-primary-foreground: oklch(20.5% 0 0);
-    --color-border: oklch(100% 0 0 / 10%);
+  :root:not([data-theme="light"]) {
+    --color-background: #12151c;
+    --color-surface: #1b1f29;
+    --color-foreground: #eef0f4;
+    --color-muted: #262b37;
+    --color-muted-foreground: #a7b0bf;
+    --color-primary: #8c9dff;
+    --color-primary-foreground: #10131a;
+    --color-border: #333a48;
+    --color-good: #62d29c;
+    --color-good-soft: #15352a;
+    --color-warn: #f0b75e;
+    --color-warn-soft: #3b2b10;
+    --color-bad: #ff9a8d;
+    --color-bad-soft: #421d19;
+    --color-info: #86b6ff;
+    --color-info-soft: #172c4a;
+    --color-agent: #bca8ff;
+    --color-agent-soft: #2a2049;
+    --color-maya: #ff9fc4;
+    --color-maya-soft: #42182b;
+    --color-arjun: #72d7e6;
+    --color-arjun-soft: #103a42;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 18px rgb(0 0 0 / 25%);
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --color-background: #12151c;
+  --color-surface: #1b1f29;
+  --color-foreground: #eef0f4;
+  --color-muted: #262b37;
+  --color-muted-foreground: #a7b0bf;
+  --color-primary: #8c9dff;
+  --color-primary-foreground: #10131a;
+  --color-border: #333a48;
+  --color-good: #62d29c;
+  --color-good-soft: #15352a;
+  --color-warn: #f0b75e;
+  --color-warn-soft: #3b2b10;
+  --color-bad: #ff9a8d;
+  --color-bad-soft: #421d19;
+  --color-info: #86b6ff;
+  --color-info-soft: #172c4a;
+  --color-agent: #bca8ff;
+  --color-agent-soft: #2a2049;
+  --color-maya: #ff9fc4;
+  --color-maya-soft: #42182b;
+  --color-arjun: #72d7e6;
+  --color-arjun-soft: #103a42;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 18px rgb(0 0 0 / 25%);
+  color-scheme: dark;
 }
 
 body {
   @apply bg-background text-foreground antialiased;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .pulse-dot {
+    animation: none;
+  }
 }

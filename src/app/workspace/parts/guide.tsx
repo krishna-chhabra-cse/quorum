@@ -1,36 +1,32 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { View } from "../types";
 
 const STEPS = [
-  "Pick who you are on the join page. Open this page in a second window as the other person.",
-  "Look at the page sections. Each one shows what it depends on.",
-  "Propose a change to a decision, such as the target customer. Write the new value and a reason.",
-  "The other person confirms. Only the sections that depend on that decision are marked Stale.",
-  "Click Redo with latest on a stale section. The agent reads the new versions and writes again.",
-  "Pricing asks a Decision Card question. One person answers, the other confirms, then the pricing decision is updated.",
-  "When nothing is waiting, Publish the page and open the published copy.",
+  "Join as Maya here, and join as Arjun in a private window.",
+  "Press Start agents. Copy Agent finishes in about 10 seconds. Pricing Agent takes about a minute.",
+  "While Pricing Agent writes, Maya changes the target customer to Enterprise IT teams. Arjun confirms it.",
+  "Watch the work written from the old plan get marked Out of date. Approving it is locked.",
+  "Press Restart on Copy Agent to clear its memory. It rebuilds what it knows from saved records and catches up alone.",
+  "Press Redo with latest on Pricing. It stops and asks a question. One person answers, the other confirms.",
+  "Approve the new drafts, then publish the page and open its public link.",
 ];
 
-// Collapsible, plain-language walkthrough of the demo.
+// Collapsible walkthrough of the demo for someone seeing it for the first time.
 export function Guide() {
   const [open, setOpen] = useState(false);
   return (
-    <section aria-labelledby="guide-heading" className="rounded-lg border border-border bg-background p-4 sm:p-5">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between text-left"
-      >
-        <span id="guide-heading" className="text-base font-semibold">
+    <section aria-labelledby="guide-heading" className="rounded-2xl border border-border bg-surface shadow-card">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left sm:px-5">
+        <span id="guide-heading" className="text-sm font-bold">
           How to run the 7-step demo
         </span>
-        <span className="text-sm text-muted-foreground">{open ? "Hide" : "Show"}</span>
+        <ChevronDown size={18} aria-hidden="true" className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? (
-        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
+        <ol className="list-decimal space-y-2 px-4 pb-5 pl-9 text-sm sm:px-5 sm:pl-10">
           {STEPS.map((s) => (
             <li key={s}>{s}</li>
           ))}
@@ -44,31 +40,23 @@ export function Guide() {
 export function RealityPanel({ view }: { view: View }) {
   const [open, setOpen] = useState(false);
   return (
-    <section aria-labelledby="reality-heading" className="rounded-lg border border-border bg-background p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className="text-left text-base font-semibold"
-          id="reality-heading"
-        >
+    <section aria-labelledby="reality-heading" className="rounded-2xl border border-border bg-surface shadow-card">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left sm:px-5">
+        <span id="reality-heading" className="text-sm font-bold">
           What is real and what is simulated
-        </button>
-        <ModeBadge live={view.aiLive} />
-      </div>
+        </span>
+        <ChevronDown size={18} aria-hidden="true" className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
       {open ? (
-        <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-          <li>Real: decisions, versions, proposals, approvals, the audit log, publishing, and the database writes behind them.</li>
-          <li>
-            Real: the agents' run timing and the moment each run reads decision versions. Each proposal copies those versions.
-          </li>
+        <ul className="list-disc space-y-2 px-4 pb-5 pl-9 text-sm text-muted-foreground sm:px-5 sm:pl-10">
+          <li>Real: decisions, versions, drafts, approvals, the activity log, publishing, and the database behind them.</li>
+          <li>Real: agent timing, the plan each agent read when it started, and the check that blocks outdated work.</li>
           <li>
             {view.aiLive
               ? "Live: section text comes from the configured AI service."
-              : "Simulated: section text uses prewritten copy, because no AI service is configured. The wording still follows the decisions each run read."}
+              : "Simulated: section text is prewritten because no AI service is connected. The wording still follows the plan each agent read."}
           </li>
-          <li>Simulated: the two people are two browser windows, not real accounts. Presence dots show who has this page open.</li>
+          <li>Simulated: Maya and Arjun are two browser windows, not real accounts. Online dots show who has this page open.</li>
         </ul>
       ) : null}
     </section>
@@ -77,11 +65,7 @@ export function RealityPanel({ view }: { view: View }) {
 
 export function ModeBadge({ live }: { live: boolean }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-        live ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground"
-      }`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${live ? "bg-agent-soft text-agent" : "bg-muted text-muted-foreground"}`}>
       {live ? "Live AI" : "Scripted text"}
     </span>
   );

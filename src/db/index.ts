@@ -26,7 +26,12 @@ export function getPool(): Pool {
   if (!url) {
     throw new SetupError("DATABASE_URL is not set. Add it to your environment and restart the app.", "missing_url");
   }
-  if (!g.__quorumPool) g.__quorumPool = new Pool({ connectionString: url, max: 5 });
+  if (!g.__quorumPool) {
+    const pool = new Pool({ connectionString: url, max: 5, idleTimeoutMillis: 20_000, connectionTimeoutMillis: 15_000 });
+    // Neon closes idle connections. Without a listener, that would crash the whole server process.
+    pool.on("error", (err: Error) => console.error("quorum idle database connection closed:", err.message));
+    g.__quorumPool = pool;
+  }
   return g.__quorumPool;
 }
 

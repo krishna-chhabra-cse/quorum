@@ -1,19 +1,40 @@
 import type { PoolClient } from "@neondatabase/serverless";
 import { getPool } from "@/db";
 
-// Runs fn inside a real transaction. Commits when fn returns, rolls back when it throws.
-export async function withTx<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+const ignoreDrop = (err: Error) => console.error("quorum database connection dropped:", err.message);
+
+// Checks out a connection that has really started a transaction. A pooled connection can be
+// dead by the time it is used, and nothing has run yet at this point, so one retry is safe.
+async function begin(retries = 1): Promise<PoolClient> {
   const client = await getPool().connect();
+  client.on("error", ignoreDrop);
   try {
     await client.query("BEGIN");
+    return client;
+  } catch (err) {
+    client.off("error", ignoreDrop);
+    client.release(true);
+    if (retries > 0) return begin(retries - 1);
+    throw err;
+  }
+}
+
+// Runs fn inside a real transaction. Commits when fn returns, rolls back when it throws.
+export async function withTx<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+  const client = await begin();
+  let broken = false;
+  try {
     const out = await fn(client);
     await client.query("COMMIT");
     return out;
   } catch (err) {
-    await client.query("ROLLBACK").catch(() => {});
+    await client.query("ROLLBACK").catch(() => {
+      broken = true;
+    });
     throw err;
   } finally {
-    client.release();
+    client.off("error", ignoreDrop);
+    client.release(broken);
   }
 }
 

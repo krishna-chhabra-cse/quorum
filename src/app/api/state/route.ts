@@ -14,12 +14,13 @@ export async function GET(req: Request) {
   try {
     const who = requirePerson(req);
     await ensureDatabase();
-    const view = await withTx(async (c) => {
+    // Writes commit first, so reading the view never holds a row lock.
+    await withTx(async (c) => {
       await heartbeat(c, who);
       await tickAgent(c, "copy");
       await tickAgent(c, "pricing");
-      return loadView(c, who);
     });
+    const view = await withTx((c) => loadView(c, who));
     return NextResponse.json({ ok: true, view });
   } catch (err) {
     return errorResponse(err);

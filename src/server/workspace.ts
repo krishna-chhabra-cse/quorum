@@ -75,15 +75,39 @@ export async function publishPage(c: PoolClient, who: Person): Promise<Result & 
     return { ok: false, status: 409, message: "Not ready to publish: " + blockers.length + " item(s) still need a decision." };
   }
   const decisions = await rows<any>(c, `SELECT id, title, current_version, current_value FROM decisions ORDER BY id`);
+  const changes_made = await rows<any>(
+    c,
+    `SELECT v.decision_id, v.version, v.value, v.requested_by, v.confirmed_by, v.reason, d.title
+     FROM decision_versions v JOIN decisions d ON d.id = v.decision_id
+     WHERE v.version > 1 ORDER BY v.created_at`,
+  );
+  const events = await rows<any>(c, `SELECT seq, plain, created_at FROM events WHERE kind <> 'agent_step' ORDER BY seq DESC LIMIT 30`);
+  const lastReset = events.findIndex((e) => e.plain.includes("reset the demo"));
+  const approved = props.filter((p) => p.status === "approved");
+  const approvers = await rows<any>(c, `SELECT actor, target_id FROM approvals WHERE action = 'approve'`);
   const snapshot = {
     publishedBy: who,
-    sections: secs.map((s) => ({
-      id: s.id,
-      title: s.title,
-      text: s.approved_text,
-      dependsOn: deps.filter((d) => d.section_id === s.id).map((d) => d.decision_id),
-    })),
+    sections: secs.map((s) => {
+      const p = approved.filter((x) => x.section_id === s.id).sort((a, b) => +new Date(b.resolved_at) - +new Date(a.resolved_at))[0];
+      const by = p ? approvers.find((a) => a.target_id === String(p.id))?.actor : null;
+      return {
+        id: s.id,
+        title: s.title,
+        text: s.approved_text,
+        dependsOn: deps.filter((d) => d.section_id === s.id).map((d) => d.decision_id),
+        source: p ? p.mode : "starting",
+        approvedBy: by ? PERSON_NAME[by as Person] : null,
+      };
+    }),
     decisions: decisions.map((d) => ({ id: d.id, title: d.title, version: d.current_version, value: d.current_value })),
+    changes: changes_made.map((v) => ({
+      title: v.title,
+      value: v.value,
+      reason: v.reason,
+      requestedBy: PERSON_NAME[v.requested_by as Person] ?? null,
+      confirmedBy: PERSON_NAME[v.confirmed_by as Person] ?? null,
+    })),
+    timeline: (lastReset === -1 ? events : events.slice(0, lastReset)).reverse().map((e) => ({ plain: e.plain, at: e.created_at })),
   };
   const token = randomUUID().replace(/-/g, "").slice(0, 16);
   await c.query(`INSERT INTO published_pages (id, token, snapshot) VALUES ($1,$2,$3)`, [randomUUID(), token, JSON.stringify(snapshot)]);

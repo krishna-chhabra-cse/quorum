@@ -25,6 +25,7 @@ export const ACTIONS = {
   answerCard: z.object({ cardId: id, optionId: id, note: z.string().trim().max(400).default("") }),
   confirmCard: z.object({ cardId: id }),
   rejectCard: z.object({ cardId: id }),
+  startAgents: z.object({}),
   restart: z.object({ agentId: z.enum(["copy", "pricing"]) }),
   redoLatest: z.object({ proposalId: id }),
   publish: z.object({}),
@@ -71,6 +72,10 @@ export async function runAction(c: PoolClient, who: Person, name: ActionName, ra
     }
     case "rejectCard":
       return toOut(await rejectCard(c, who, body.cardId), "Sent back open.");
+    case "startAgents":
+      await startAgent(c, "copy");
+      await startAgent(c, "pricing");
+      return { ok: true, message: "Both agents are writing now." };
     case "restart":
       return toOut(await restartAgent(c, who, body.agentId));
     case "redoLatest": {

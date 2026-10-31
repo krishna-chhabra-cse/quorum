@@ -34,13 +34,15 @@ export async function loadView(c: PoolClient, me: Person) {
     const dependsOn = depRows.filter((d) => d.section_id === s.id).map((d) => d.decision_id as string);
     const owner = agentRows.find((a) => a.id === s.agent_id);
     const pending = proposalRows.find((p) => p.section_id === s.id && p.status === "pending");
+    const openCard = cardRows.some((k) => k.agent_id === s.agent_id && k.status !== "confirmed");
     let status: SectionStatus = "current";
     // Stale is stored on the section and always wins. Pending proposals need a human.
-    // A working agent shows as working. A waiting agent needs a human, so it shows as needing a decision.
+    // The footer only gets a run when it is stale, so an agent's status never applies to it here.
+    // Sections with settled text stay Current while their agent waits on a different section.
     if (s.status === "stale") status = "stale";
     else if (pending) status = "awaiting_approval";
-    else if (owner?.status === "working") status = "agent_working";
-    else if (owner?.status === "waiting") status = "awaiting_approval";
+    else if (s.id !== "footer" && owner?.status === "working") status = "agent_working";
+    else if (s.id !== "footer" && openCard) status = "awaiting_approval";
     return {
       id: s.id as string,
       title: s.title as string,

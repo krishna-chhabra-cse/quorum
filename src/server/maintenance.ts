@@ -4,9 +4,9 @@ import { logEvent } from "./events";
 import { insertSeed } from "@/db/setup";
 import { PERSON_NAME, type Person } from "@/db/seed";
 
-// Reset demo: wipe the working data and put the seed back. The event history is kept
-// as an audit trail, and a reset event is appended. The event counter is preserved so
-// new event sequence numbers never collide with the kept history.
+// Reset demo: wipe the working data and put the seed back. Published pages stay, so shared
+// links keep working. The event history is kept as an audit trail, and a reset event is
+// appended. The event counter is preserved so new sequence numbers never collide with it.
 export async function resetDemo(c: PoolClient, who: Person): Promise<{ ok: true; message: string }> {
   const counter = await one<{ value: string }>(c, `SELECT value FROM meta WHERE key = 'event_seq'`);
   for (const t of [
@@ -16,7 +16,6 @@ export async function resetDemo(c: PoolClient, who: Person): Promise<{ ok: true;
     "proposals",
     "runs",
     "approvals",
-    "published_pages",
     "section_dependencies",
     "sections",
     "decisions",
